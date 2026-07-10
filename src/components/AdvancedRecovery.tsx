@@ -6,6 +6,7 @@ import { readMint, MintInfo, fmtSol, fmtUsd, shorten } from "../lib/solana";
 import { buildRecoveryPlan } from "../lib/recovery";
 import { resolveAffiliate, feeRecipientsFor, totalFeeBps } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
+import { confirmOrThrow } from "../lib/confirm";
 import { ClaimSuccessModal } from "./ClaimSuccessModal";
 import { CLI_URL } from "../lib/site";
 
@@ -110,9 +111,12 @@ function BrowserRecovery({ initialMint }: { initialMint?: string }) {
     if (ref) resolveAffiliate(ref).then(setAffiliate);
   }, []);
 
-  // Seed + auto-look-up when the standard flow hands us a renounced mint.
+  // Seed + auto-look-up when the standard flow hands us a renounced mint, so the
+  // user never has to re-paste the address and hit "Check mint" again. `mint` is
+  // already initialized to initialMint, so we can't guard on inequality here —
+  // just (re)run the lookup whenever a preset mint arrives.
   useEffect(() => {
-    if (initialMint && initialMint !== mint) { setMint(initialMint); lookup(initialMint); }
+    if (initialMint) { setMint(initialMint); lookup(initialMint); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMint]);
 
@@ -160,14 +164,7 @@ function BrowserRecovery({ initialMint }: { initialMint?: string }) {
       setStatus("Awaiting signature…");
       const signature = await sendTransaction(tx, connection, { signers: [mintKp] });
       setStatus("Confirming…");
-      try {
-        await connection.confirmTransaction(signature, "confirmed");
-      } catch (confirmErr) {
-        const st = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
-        const ok = st.value && !st.value.err &&
-          (st.value.confirmationStatus === "confirmed" || st.value.confirmationStatus === "finalized");
-        if (!ok) throw confirmErr;
-      }
+      await confirmOrThrow(connection, signature);
       setStatus("");
       const affiliateLamports = plan.breakdown.find((b) => b.label === "affiliate")?.lamports ?? 0;
       await recordClaim({ wallet: publicKey.toBase58(), mint: mintPk.toBase58(),

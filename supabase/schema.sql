@@ -7,6 +7,9 @@
 --    the vanity leaderboard and the code→wallet lookup.
 --  * `affiliates.code` is the primary key and there is NO update/delete policy, so an
 --    existing code can never be re-pointed at a different wallet (first-writer-wins).
+--  * `claims` rows are written ONLY by the `record-claim` Edge Function (service role),
+--    which re-verifies the transaction on-chain first. Anonymous INSERT is NOT allowed
+--    (there is no claims insert policy), so the public anon key cannot fabricate rows.
 
 create table if not exists public.affiliates (
   code       text primary key,
@@ -38,8 +41,9 @@ drop policy if exists affiliates_insert on public.affiliates;
 create policy affiliates_read   on public.affiliates for select using (true);
 create policy affiliates_insert on public.affiliates for insert with check (true);
 
--- claims: anyone may read (leaderboard) and insert (record a recovery).
+-- claims: anyone may read (leaderboard). NO insert policy — inserts come only from
+-- the record-claim Edge Function via the service role, which bypasses RLS. Dropping
+-- the old public insert policy is what closes the "curl a fake row" hole.
 drop policy if exists claims_read   on public.claims;
 drop policy if exists claims_insert on public.claims;
-create policy claims_read   on public.claims for select using (true);
-create policy claims_insert on public.claims for insert with check (true);
+create policy claims_read on public.claims for select using (true);

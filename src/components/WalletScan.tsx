@@ -5,6 +5,7 @@ import { scanWallet, ScannedMint, fmtSol, fmtUsd, shorten } from "../lib/solana"
 import { buildRecoveryPlan } from "../lib/recovery";
 import { feeRecipientsFor, resolveAffiliate } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
+import { confirmOrThrow } from "../lib/confirm";
 
 // How many mints to sweep in a single transaction on "Recover all". Each mint adds
 // one withdraw + fee-split instruction(s); this stays comfortably under the size cap.
@@ -61,27 +62,22 @@ export function WalletScan() {
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
     const sig = await sendTransaction(tx, connection);
-    try {
-      await connection.confirmTransaction(sig, "confirmed");
-    } catch (confirmErr) {
-      const st = await connection.getSignatureStatus(sig, { searchTransactionHistory: true });
-      const ok = st.value && !st.value.err &&
-        (st.value.confirmationStatus === "confirmed" || st.value.confirmationStatus === "finalized");
-      if (!ok) throw confirmErr;
-    }
+    await confirmOrThrow(connection, sig);
 
-    // Record each recovered mint; mark rows done.
+    // A batch is a single transaction, so it's one leaderboard row: the
+    // record-claim function derives the total recovered from the tx itself
+    // (unique(sig) would reject per-mint duplicates anyway). Sum only feeds the
+    // local cache; the server ignores client-supplied amounts.
     const nextDone: Record<string, string> = {};
-    for (const { m, plan } of plans) {
-      nextDone[m.mint] = sig;
-      const affLamports = plan.breakdown.find((b) => b.label === "affiliate")?.lamports ?? 0;
-      await recordClaim({
-        wallet: publicKey.toBase58(), mint: m.mint,
-        recoveredLamports: plan.netToDevLamports, sig, at: Date.now(),
-        affiliateCode: affiliate ? affCode.trim().toUpperCase() : null,
-        affiliateLamports: affLamports,
-      });
-    }
+    for (const { m } of plans) nextDone[m.mint] = sig;
+    await recordClaim({
+      wallet: publicKey.toBase58(), mint: plans[0].m.mint,
+      recoveredLamports: plans.reduce((s, p) => s + p.plan.netToDevLamports, 0),
+      sig, at: Date.now(),
+      affiliateCode: affiliate ? affCode.trim().toUpperCase() : null,
+      affiliateLamports: plans.reduce(
+        (s, p) => s + (p.plan.breakdown.find((b) => b.label === "affiliate")?.lamports ?? 0), 0),
+    });
     setDone((d) => ({ ...d, ...nextDone }));
   }
 

@@ -6,6 +6,7 @@ import { readMint, MintInfo, fmtSol, fmtUsd, shorten, scanWallet, ScannedMint } 
 import { buildRecoveryPlan } from "../lib/recovery";
 import { resolveAffiliate, feeRecipientsFor, totalFeeBps } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
+import { confirmOrThrow } from "../lib/confirm";
 import { BrickScanner } from "./BrickScanner";
 import { ClaimSuccessModal } from "./ClaimSuccessModal";
 
@@ -101,16 +102,9 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
       setStatus("Awaiting signature…");
       const signature = await sendTransaction(tx, connection);
       setStatus("Confirming…");
-      // A slow RPC can time out confirmTransaction even when the tx lands. Don't let
-      // that skip the claim record - fall back to checking the signature status.
-      try {
-        await connection.confirmTransaction(signature, "confirmed");
-      } catch (confirmErr) {
-        const st = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
-        const ok = st.value && !st.value.err &&
-          (st.value.confirmationStatus === "confirmed" || st.value.confirmationStatus === "finalized");
-        if (!ok) throw confirmErr; // genuinely not landed
-      }
+      // Throws unless the tx landed AND succeeded on-chain — a reverted tx must
+      // never be recorded as a recovery.
+      await confirmOrThrow(connection, signature);
       setSig(signature);
       setStatus("");
       const affiliateLamports = plan.breakdown.find((b) => b.label === "affiliate")?.lamports ?? 0;

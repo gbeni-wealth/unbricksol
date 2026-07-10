@@ -18,14 +18,48 @@ export interface MintInfo {
   isMint: boolean;
 }
 
+// Owner == the Token program is NOT enough to call an address a mint — token
+// *accounts* (incl. wrapped-SOL accounts) are owned by the same program. We must
+// disambiguate by layout, or withdraw_excess_lamports reverts on-chain
+// (Custom: 10 / NativeNotSupported) on anything that isn't actually a mint.
+//   Classic Token: mint = 82 bytes exactly, account = 165, multisig = 355.
+//   Token-2022:    base mint 82 / account 165; with extensions an account-type
+//                  byte at offset 165 discriminates (1 = Mint, 2 = Account).
+const ACCOUNT_TYPE_OFFSET = 165;
+function isMintLayout(programId: PublicKey, data: Buffer): boolean {
+  if (programId.equals(TOKEN_PROGRAM)) return data.length === 82;
+  // Token-2022
+  if (data.length === 82) return true;
+  if (data.length === 165) return false;
+  if (data.length > ACCOUNT_TYPE_OFFSET) return data[ACCOUNT_TYPE_OFFSET] === 1;
+  return false;
+}
+
+// A token account with its is_native COption set (tag at byte offset 109) is a
+// wrapped-SOL account — its SOL is reclaimed by closing it, not by a mint withdraw.
+function isNativeTokenAccount(data: Buffer): boolean {
+  return data.length >= 113 && data.readUInt32LE(109) === 1;
+}
+
 /** Read a mint: recoverable excess + whether authority is active or renounced. */
 export async function readMint(mint: PublicKey): Promise<MintInfo> {
   const info = await connection.getAccountInfo(mint);
   if (!info) throw new Error("Address not found on-chain");
   const owner = info.owner;
-  const isMint = owner.equals(TOKEN_PROGRAM) || owner.equals(TOKEN_2022_PROGRAM);
-  if (!isMint) throw new Error("This address is not a token mint");
+  const isTokenProgram = owner.equals(TOKEN_PROGRAM) || owner.equals(TOKEN_2022_PROGRAM);
+  if (!isTokenProgram) throw new Error("This address is not a token mint");
   const programId = owner.equals(TOKEN_2022_PROGRAM) ? TOKEN_2022_PROGRAM : TOKEN_PROGRAM;
+
+  // Reject token accounts, wrapped-SOL accounts and multisigs — only a real mint
+  // has recoverable excess; anything else always reverts on-chain.
+  if (!isMintLayout(programId, info.data)) {
+    if (isNativeTokenAccount(info.data))
+      throw new Error(
+        "This is a wrapped-SOL account, not a mint. Its SOL is reclaimed by the owner closing the account — support for that is coming soon.",
+      );
+    throw new Error("This is a token account, not a token mint. Excess-SOL recovery applies to mint accounts.");
+  }
+
   const rent = await connection.getMinimumBalanceForRentExemption(info.data.length);
   const excessLamports = Math.max(info.lamports - rent, 0);
 

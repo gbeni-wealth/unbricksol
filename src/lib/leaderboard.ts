@@ -25,19 +25,34 @@ function getLocal(): Claim[] {
   return JSON.parse(localStorage.getItem(LS) || "[]");
 }
 
-/** Record a successful recovery. Writes to Supabase (global) + localStorage (cache). */
+/**
+ * Record a successful recovery.
+ *
+ * The global row is written by the `record-claim` Edge Function, which re-verifies
+ * the transaction on-chain and inserts with the service role. The public anon key
+ * can no longer insert into `claims` directly (RLS), so a fabricated row is
+ * impossible — and the amount/affiliate payout are derived from the tx server-side,
+ * not trusted from here (so `recoveredLamports`/`affiliateLamports` below only feed
+ * the local cache). A recording failure must never break the recovery UX (the
+ * on-chain recovery already succeeded), so errors are swallowed.
+ */
 export async function recordClaim(c: Claim) {
   const cluster = c.cluster ?? APP_CLUSTER;
   const all = getLocal();
   all.push({ ...c, cluster });
   localStorage.setItem(LS, JSON.stringify(all));
 
-  if (supabase) {
-    await supabase.from("claims").insert({
-      wallet: c.wallet, mint: c.mint, recovered_lamports: c.recoveredLamports,
-      sig: c.sig, affiliate_code: c.affiliateCode ?? null, cluster,
-      affiliate_lamports: c.affiliateLamports ?? 0,
+  if (!supabase) return;
+  try {
+    const { error } = await supabase.functions.invoke("record-claim", {
+      body: {
+        sig: c.sig, wallet: c.wallet, mint: c.mint,
+        affiliateCode: c.affiliateCode ?? null, cluster,
+      },
     });
+    if (error) console.warn("record-claim rejected (recovery still succeeded):", error);
+  } catch (e) {
+    console.warn("record-claim failed (recovery still succeeded):", e);
   }
 }
 
