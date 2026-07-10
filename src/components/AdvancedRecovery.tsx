@@ -25,28 +25,27 @@ export function AdvancedRecovery({ open, onToggle, presetMint }: {
   const [mode, setMode] = useState<Mode>("browser");
 
   return (
-    <section id="advanced" className="max-w-6xl mx-auto px-6 pt-2 pb-16 scroll-mt-4">
-      <div className="rounded-2xl bg-panel2 hairline p-6 sm:p-8">
-        {/* Collapsed header — clicking toggles the details. */}
+    <section id="advanced" className="max-w-6xl mx-auto px-6 pt-2 pb-10 scroll-mt-4">
+      <div className="rounded-xl bg-panel2 hairline">
+        {/* Compact collapsed row — clicking toggles the details. */}
         <button onClick={onToggle} aria-expanded={open}
-          className="w-full flex items-center justify-between gap-4 text-left">
-          <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-faint">Advanced</div>
-            <h2 className="font-display font-bold text-2xl mt-1">
-              Advanced recovery <span className="text-muted font-normal text-lg">(original mint keypair required)</span>
-            </h2>
-            <p className="text-sm text-muted mt-2 leading-relaxed max-w-2xl">
-              For developers who still hold the original mint keypair — for example a mint whose
-              authority has been renounced.
-            </p>
+          className="w-full flex items-center justify-between gap-4 text-left px-5 py-3.5">
+          <div className="min-w-0">
+            <div className="font-display font-semibold text-base">
+              Advanced recovery
+              <span className="text-muted font-normal text-sm"> · original mint keypair required</span>
+            </div>
+            <div className="font-mono text-[11px] text-faint mt-0.5 truncate">
+              For a renounced mint — recover in-browser or via the open-source CLI.
+            </div>
           </div>
-          <span className="font-mono text-xs text-muted whitespace-nowrap shrink-0 border border-line2 rounded-lg px-3 py-2">
+          <span className="font-mono text-[11px] text-muted whitespace-nowrap shrink-0">
             {open ? "Hide ▲" : "Show ▼"}
           </span>
         </button>
 
         {open && (
-          <div className="mt-6">
+          <div className="px-5 pb-6 pt-4 border-t border-line">
             <p className="text-sm text-muted leading-relaxed max-w-2xl">
               This method is intended for developers who still possess the original mint keypair used
               during token creation. Choose the trust model you're comfortable with.
