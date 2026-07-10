@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Apply saved (or system) theme before paint to avoid a flash.
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches))
+          document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <title>UnbrickSOL · reclaim bricked SOL from token mints</title>
+    <meta name="description" content="A recent Solana upgrade lets you withdraw the SOL stuck in old token mint accounts. Look up your mint, see what's recoverable, and claim it in a couple of clicks. Non-custodial, keys stay local." />
+
+    <!-- Open Graph (Facebook, Discord, Telegram, LinkedIn, iMessage) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="UnbrickSOL" />
+    <meta property="og:url" content="https://unbricksol.com/" />
+    <meta property="og:title" content="UnbrickSOL · reclaim the SOL stuck in your old token" />
+    <meta property="og:description" content="A recent Solana upgrade lets you withdraw the SOL sitting in mint accounts since 2020. Non-custodial, keys stay local." />
+    <meta property="og:image" content="https://unbricksol.com/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="UnbrickSOL · get back the SOL stuck in your old token" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="UnbrickSOL · reclaim the SOL stuck in your old token" />
+    <meta name="twitter:description" content="A recent Solana upgrade lets you withdraw the SOL sitting in mint accounts since 2020. Non-custodial, keys stay local." />
+    <meta name="twitter:image" content="https://unbricksol.com/og.png" />
+
+    <meta name="theme-color" content="#2C6ADB" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

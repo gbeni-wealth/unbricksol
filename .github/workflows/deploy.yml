@@ -1,0 +1,86 @@
+name: Deploy to Vercel (production)
+
+# Vercel's own build container can't launch Chromium (missing libnss3), so the SEO
+# prerender fails there. This workflow builds on an Ubuntu runner — where full Chromium
+# works — and deploys the prebuilt output to Vercel. Vercel's native git auto-deploy for
+# `main` is disabled in vercel.json so it doesn't race this with a no-prerender build.
+#
+# Setup (once): run scripts/setup-ci-secrets.sh to push VERCEL_TOKEN + the VITE_* secrets.
+# Until VERCEL_TOKEN exists, this workflow no-ops cleanly (no red failures).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.VERCEL_TOKEN != '' }}
+      VERCEL_ORG_ID: team_K4DrwrM8gZ7ps3584qq1pELl
+      VERCEL_PROJECT_ID: prj_f7JRHeYugEev6Kvsbjmyzk7Yljrz
+    steps:
+      - name: Check for Vercel token
+        run: |
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::warning::VERCEL_TOKEN not configured — skipping deploy. Run scripts/setup-ci-secrets.sh, then re-run."
+          fi
+
+      - uses: actions/checkout@v4
+        if: env.HAS_TOKEN == 'true'
+
+      - uses: actions/setup-node@v4
+        if: env.HAS_TOKEN == 'true'
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: env.HAS_TOKEN == 'true'
+        run: npm ci
+
+      - name: Install Chromium + system libs for prerender
+        if: env.HAS_TOKEN == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Vercel CLI
+        if: env.HAS_TOKEN == 'true'
+        run: npm i -g vercel@latest
+
+      - name: Pull Vercel project settings
+        if: env.HAS_TOKEN == 'true'
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Provide real VITE_* env (Sensitive vars pull back empty)
+        if: env.HAS_TOKEN == 'true'
+        run: |
+          cat > .vercel/.env.production.local <<EOF
+          VITE_RPC=${{ secrets.VITE_RPC }}
+          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_PLATFORM_WALLET=${{ secrets.VITE_PLATFORM_WALLET }}
+          EOF
+
+      - name: Build (vite + prerender on real Chromium)
+        if: env.HAS_TOKEN == 'true'
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Verify prerender produced real HTML
+        if: env.HAS_TOKEN == 'true'
+        run: |
+          f=.vercel/output/static/index.html
+          if ! grep -qi "excess SOL" "$f"; then
+            echo "::error::Prerender did not bake content into $f — aborting deploy."
+            exit 1
+          fi
+          echo "✓ Prerendered HTML looks good."
+
+      - name: Deploy prebuilt to production
+        if: env.HAS_TOKEN == 'true'
+        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"

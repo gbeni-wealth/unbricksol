@@ -1,0 +1,15 @@
+{
+  "name": "unbricksol-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Recover excess SOL from a Solana token mint locally. Keys never leave your machine.",
+  "bin": { "unbricksol-recover": "./recover.mjs" },
+  "scripts": {
+    "check": "node recover.mjs check",
+    "recover": "node recover.mjs recover"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.3"
+  }
+}

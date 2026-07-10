@@ -1,0 +1,25 @@
+# UnbrickSOL - recover excess SOL from Solana token mints.
+# All crawlers welcome, including AI/LLM crawlers (allowing them enables citation).
+
+User-agent: *
+Allow: /
+
+# LLM / AI answer engines (explicitly allowed)
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Claude-Web
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://unbricksol.com/sitemap.xml

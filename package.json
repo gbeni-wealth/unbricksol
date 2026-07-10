@@ -1,0 +1,42 @@
+{
+  "name": "sol-recovery-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 4600",
+    "build": "tsc -b && vite build && node scripts/prerender.mjs",
+    "build:spa": "tsc -b && vite build",
+    "prerender": "node scripts/prerender.mjs",
+    "deploy": "bash scripts/deploy.sh",
+    "postinstall": "playwright install chromium",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@solana/spl-token": "^0.4.9",
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/wallet-adapter-react-ui": "^0.9.35",
+    "@solana/wallet-adapter-wallets": "^0.19.32",
+    "@solana/web3.js": "^1.95.3",
+    "@supabase/supabase-js": "^2.109.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "overrides": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "playwright": "^1.61.1",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.4",
+    "vite-plugin-node-polyfills": "^0.22.0"
+  }
+}

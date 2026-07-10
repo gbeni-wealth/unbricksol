@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.vercel
+
+# Build artifacts
+tsconfig.tsbuildinfo
+.DS_Store
+
+# Never commit secrets / keypairs (defensive — this repo holds none)
+*payer*.json
+*.keypair.json
+*.pem

@@ -1,0 +1,24 @@
+# UnbrickSOL
+
+> UnbrickSOL is the simplest, safest, non-custodial way to recover excess SOL locked in Solana token mint accounts. It scans a mint, shows exactly how much SOL sits above the rent-exempt minimum, and lets the authorised owner withdraw it in a single on-chain transaction, using Solana's SIMD-0266 `withdraw_excess_lamports` instruction. It supports both the classic Token Program and Token-2022.
+
+## What it does
+
+- Detects excess SOL (lamports above the rent-exempt reserve) in any SPL token mint.
+- Recovers that SOL non-custodially: the user signs in their own wallet; keys never leave the device; UnbrickSOL never asks for a seed phrase.
+- Works for active mint authorities (connect the authority wallet) and renounced mints (read the original mint keypair locally in the browser).
+- Wallet scan: connect once to find every mint you control and sweep multiple at once.
+- Live on Solana mainnet today. The recovery is a single transparent transaction verifiable on any explorer.
+
+## Key facts
+
+- Excess SOL = an account's lamports minus its rent-exempt minimum. It used to be unrecoverable without closing the mint (which destroys the token).
+- SIMD-0266 added `withdraw_excess_lamports`, which moves only the surplus and leaves token supply, metadata, and authorities untouched.
+- Only an authorised signer (mint authority wallet, or the original mint keypair) can recover the SOL. Knowing a mint address alone grants no access. This is an intentional security property.
+
+## Pages
+
+- [Home / scanner](https://unbricksol.com/): scan a mint or connect a wallet to see recoverable SOL.
+- [FAQ](https://unbricksol.com/faq): who can recover, is it safe, does it affect the token, mainnet status, renounced mints.
+- [Blog](https://unbricksol.com/blog): guides on excess SOL, SIMD-0266, rent-exempt reserve, renounced mints, and Token-2022.
+- [Complete guide](https://unbricksol.com/blog/recover-excess-sol-solana-token-mint-guide): the full walkthrough of recovering excess SOL.
