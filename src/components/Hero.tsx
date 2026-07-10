@@ -1,7 +1,7 @@
 const CHIPS = [
   "Non-custodial",
   "Keys never leave your device",
-  "Verified on devnet",
+  "Verified on mainnet",
   "SIMD-0266",
 ];
 
