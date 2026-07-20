@@ -8,6 +8,7 @@ import { resolveAffiliate, feeRecipientsFor, totalFeeBps } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
 import { confirmOrThrow } from "../lib/confirm";
 import { SITE_URL } from "../lib/site";
+import { readTokenMeta, TokenMeta } from "../lib/tokenMeta";
 import { BrickScanner } from "./BrickScanner";
 import { ClaimSuccessModal } from "./ClaimSuccessModal";
 
@@ -34,6 +35,7 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
   const [claim, setClaim] = useState<{ lamports: number; sig: string } | null>(null);
   // Transient "Copied ✓" feedback after a share.
   const [shared, setShared] = useState(false);
+  const [meta, setMeta] = useState<TokenMeta | null>(null);
 
   async function shareMint() {
     const trimmed = mint.trim();
@@ -64,11 +66,15 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
   }, [aff]);
 
   async function lookup() {
-    setErr(""); setInfo(null); setSig(""); setStatus("");
+    setErr(""); setInfo(null); setSig(""); setStatus(""); setMeta(null);
     let pk: PublicKey;
     try { pk = new PublicKey(mint.trim()); } catch { setErr("Invalid mint address"); return; }
     setLoading(true);
-    try { setInfo(await readMint(pk)); } catch (e: any) { setErr(e.message); }
+    try {
+      setInfo(await readMint(pk));
+      // Metadata is best-effort — a missing Metaplex PDA is a valid on-chain state.
+      readTokenMeta(pk).then(setMeta).catch(() => setMeta(null));
+    } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
   }
 
@@ -164,7 +170,19 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
       {info && (
         <div className="reveal-card mt-5 rounded-2xl bg-panel hairline p-6">
           <div className="flex items-start justify-between gap-4">
-            <div className="font-mono text-xs text-faint break-all min-w-0">{mint.trim()}</div>
+            <div className="min-w-0">
+              {meta?.symbol && (
+                <div className="font-display font-bold text-xl leading-tight">
+                  {meta.symbol}
+                  {meta.name && meta.name !== meta.symbol && (
+                    <span className="font-normal text-muted text-base"> · {meta.name}</span>
+                  )}
+                </div>
+              )}
+              <div className={`font-mono text-xs text-faint break-all ${meta?.symbol ? "mt-1" : ""}`}>
+                {mint.trim()}
+              </div>
+            </div>
             <button onClick={shareMint} aria-label="Share this mint"
               className="shrink-0 font-mono text-[11px] text-muted bg-panel2 hairline hover:border-sol/40 hover:text-ink rounded-lg px-2.5 py-1.5 transition whitespace-nowrap">
               {shared ? "Copied ✓" : "Share ↗"}

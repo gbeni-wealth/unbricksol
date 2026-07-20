@@ -7,6 +7,7 @@ import { buildRecoveryPlan } from "../lib/recovery";
 import { resolveAffiliate, feeRecipientsFor, totalFeeBps } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
 import { confirmOrThrow } from "../lib/confirm";
+import { readTokenMeta, TokenMeta } from "../lib/tokenMeta";
 import { ClaimSuccessModal } from "./ClaimSuccessModal";
 import { CLI_URL } from "../lib/site";
 
@@ -104,6 +105,7 @@ function BrowserRecovery({ initialMint }: { initialMint?: string }) {
   const [mintKp, setMintKp] = useState<Keypair | null>(null);
   const [affiliate, setAffiliate] = useState<PublicKey | null>(null);
   const [claim, setClaim] = useState<{ lamports: number; sig: string } | null>(null);
+  const [meta, setMeta] = useState<TokenMeta | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -125,11 +127,14 @@ function BrowserRecovery({ initialMint }: { initialMint?: string }) {
   const net = info ? info.excessLamports - fee : 0;
 
   async function lookup(addr: string = mint) {
-    setErr(""); setInfo(null); setStatus(""); setMintKp(null);
+    setErr(""); setInfo(null); setStatus(""); setMintKp(null); setMeta(null);
     let pk: PublicKey;
     try { pk = new PublicKey(addr.trim()); } catch { setErr("Invalid mint address"); return; }
     setLoading(true);
-    try { setInfo(await readMint(pk)); } catch (e: any) { setErr(e.message); }
+    try {
+      setInfo(await readMint(pk));
+      readTokenMeta(pk).then(setMeta).catch(() => setMeta(null));
+    } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
   }
 
@@ -191,6 +196,14 @@ function BrowserRecovery({ initialMint }: { initialMint?: string }) {
 
       {info && (
         <div className="mt-5">
+          {meta?.symbol && (
+            <div className="font-display font-bold text-lg leading-tight mb-4">
+              {meta.symbol}
+              {meta.name && meta.name !== meta.symbol && (
+                <span className="font-normal text-muted text-sm"> · {meta.name}</span>
+              )}
+            </div>
+          )}
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">Excess SOL</div>
