@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppWalletProvider } from "./providers/WalletProvider";
 import { AppHeader } from "./components/AppHeader";
 import { Hero } from "./components/Hero";
@@ -23,6 +23,20 @@ export default function HomeApp() {
   // hands it a renounced mint (which can only be recovered that way).
   const [advOpen, setAdvOpen] = useState(false);
   const [advMint, setAdvMint] = useState("");
+
+  // Deep-link support for outreach: unbricksol.com/?mint=<addr> pre-fills the
+  // input and scrolls to the recover section. Recover's mint-change effect then
+  // auto-runs readMint, so the visitor sees their own result immediately without
+  // pasting anything. Independent of ?ref= (which Recover reads separately).
+  useEffect(() => {
+    const m = new URLSearchParams(location.search).get("mint");
+    if (!m) return;
+    setMint(m.trim());
+    // Defer past the initial paint so the target section exists in the DOM.
+    requestAnimationFrame(() =>
+      document.getElementById("recover")?.scrollIntoView({ behavior: "smooth" }),
+    );
+  }, []);
   useSeo({
     title: `${SITE_NAME} · Recover excess SOL from your Solana token mint`,
     description: SITE_DESCRIPTION,

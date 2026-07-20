@@ -7,6 +7,7 @@ import { buildRecoveryPlan } from "../lib/recovery";
 import { resolveAffiliate, feeRecipientsFor, totalFeeBps } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
 import { confirmOrThrow } from "../lib/confirm";
+import { SITE_URL } from "../lib/site";
 import { BrickScanner } from "./BrickScanner";
 import { ClaimSuccessModal } from "./ClaimSuccessModal";
 
@@ -31,6 +32,25 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
   // Success animation payload — kept separate from `sig` because lookup() (called after a
   // recovery to refresh the mint) resets sig/info; the modal must survive that refresh.
   const [claim, setClaim] = useState<{ lamports: number; sig: string } | null>(null);
+  // Transient "Copied ✓" feedback after a share.
+  const [shared, setShared] = useState(false);
+
+  async function shareMint() {
+    const trimmed = mint.trim();
+    if (!trimmed) return;
+    const url = `${SITE_URL}/?mint=${trimmed}`;
+    const text = `Excess SOL recoverable from this mint — check it on UnbrickSOL:`;
+    // Native share on mobile / supported browsers; clipboard fallback everywhere else.
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "UnbrickSOL", text, url });
+        return;
+      }
+    } catch { /* user cancelled — fall through to clipboard */ }
+    try { await navigator.clipboard.writeText(url); } catch { return; }
+    setShared(true);
+    setTimeout(() => setShared(false), 1600);
+  }
 
   useEffect(() => {
     const ref = new URLSearchParams(location.search).get("ref");
@@ -143,7 +163,13 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
 
       {info && (
         <div className="reveal-card mt-5 rounded-2xl bg-panel hairline p-6">
-          <div className="font-mono text-xs text-faint break-all">{mint.trim()}</div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="font-mono text-xs text-faint break-all min-w-0">{mint.trim()}</div>
+            <button onClick={shareMint} aria-label="Share this mint"
+              className="shrink-0 font-mono text-[11px] text-muted bg-panel2 hairline hover:border-sol/40 hover:text-ink rounded-lg px-2.5 py-1.5 transition whitespace-nowrap">
+              {shared ? "Copied ✓" : "Share ↗"}
+            </button>
+          </div>
 
           {siblings && siblings.length > 0 && (
             <div className="mt-4 rounded-xl bg-sol/[0.06] border border-sol/30 px-4 py-3">
