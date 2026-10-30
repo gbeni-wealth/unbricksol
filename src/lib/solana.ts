@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM, TOKEN_2022_PROGRAM } from "./recovery";
 import { supabase } from "./supabase";
@@ -8,7 +9,36 @@ export const RPC_URL =
 export const connection = new Connection(RPC_URL, "confirmed");
 
 export const LAMPORTS = 1e9;
-export const SOL_USD = 195;
+
+// Live SOL price. Bootstraps at a rough fallback so the UI never renders "$NaN",
+// then fetches Jupiter Price v3 on module load and notifies subscribers.
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+let _solUsd = 195;
+const _priceSubs = new Set<() => void>();
+export const getSolUsd = () => _solUsd;
+export const subscribeSolUsd = (cb: () => void) => {
+  _priceSubs.add(cb);
+  return () => { _priceSubs.delete(cb); };
+};
+async function fetchSolUsd() {
+  try {
+    const r = await fetch(`https://lite-api.jup.ag/price/v3?ids=${SOL_MINT}`);
+    if (!r.ok) return;
+    const j = await r.json();
+    const p = j?.[SOL_MINT]?.usdPrice;
+    if (typeof p === "number" && p > 0) {
+      _solUsd = p;
+      _priceSubs.forEach((cb) => cb());
+    }
+  } catch { /* keep fallback */ }
+}
+fetchSolUsd();
+// Refresh every 5 minutes while the app is open
+if (typeof window !== "undefined") setInterval(fetchSolUsd, 5 * 60 * 1000);
+
+/** React hook: re-renders when the live SOL price updates. */
+export const useSolUsd = () =>
+  useSyncExternalStore(subscribeSolUsd, getSolUsd, getSolUsd);
 
 export interface MintInfo {
   programId: PublicKey;
@@ -147,6 +177,6 @@ export async function scanWallet(owner: PublicKey): Promise<ScannedMint[]> {
 
 export const fmtSol = (lamports: number, dp = 4) =>
   (lamports / LAMPORTS).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
-export const fmtUsd = (lamports: number) =>
-  "$" + Math.round((lamports / LAMPORTS) * SOL_USD).toLocaleString();
+export const fmtUsd = (lamports: number, solUsd: number = _solUsd) =>
+  "$" + Math.round((lamports / LAMPORTS) * solUsd).toLocaleString();
 export const shorten = (s: string, n = 4) => s.slice(0, n) + "…" + s.slice(-n);

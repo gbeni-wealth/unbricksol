@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LAMPORTS, SOL_USD, shorten } from "../lib/solana";
+import { LAMPORTS, shorten, useSolUsd } from "../lib/solana";
 
 /** Post-recovery success animation (Clean Fintech / Option 1c). Auto-plays on mount
  *  (~1.3s): card fades+scales in, green glow pulses, ring draws, checkmark draws, ◎
@@ -17,7 +17,8 @@ export function ClaimSuccessModal({
   dp?: number;      // amount decimal places (matches the app's fmtSol default)
 }) {
   const targetSol = lamports / LAMPORTS;
-  const usd = "$" + Math.round(targetSol * SOL_USD).toLocaleString();
+  const solUsd = useSolUsd();
+  const usd = "$" + Math.round(targetSol * solUsd).toLocaleString();
   const solscanHref = `https://solscan.io/tx/${sig}`;
   const fmt = (v: number) =>
     v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });

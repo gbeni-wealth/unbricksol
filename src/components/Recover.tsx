@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { readMint, MintInfo, fmtSol, fmtUsd, shorten, scanWallet, ScannedMint } from "../lib/solana";
+import { readMint, MintInfo, fmtSol, fmtUsd, shorten, scanWallet, ScannedMint, useSolUsd } from "../lib/solana";
 import { buildRecoveryPlan } from "../lib/recovery";
 import { resolveAffiliate, feeRecipientsFor, totalFeeBps } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
@@ -22,6 +22,7 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
 }) {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
+  const solUsd = useSolUsd();
   const [aff, setAff] = useState("");
   const [info, setInfo] = useState<MintInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -209,7 +210,7 @@ export function Recover({ mint, setMint, onNeedsAdvanced }: {
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">Excess SOL</div>
               <div className="font-display font-bold text-3xl text-sol mt-1">{fmtSol(info.excessLamports, 4)}</div>
-              <div className="font-mono text-xs text-muted mt-1">≈ {fmtUsd(info.excessLamports)}</div>
+              <div className="font-mono text-xs text-muted mt-1">≈ {fmtUsd(info.excessLamports, solUsd)}</div>
             </div>
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">You receive ({100 - feeBps / 100}%)</div>

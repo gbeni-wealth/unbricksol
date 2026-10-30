@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { scanWallet, ScannedMint, fmtSol, fmtUsd, shorten } from "../lib/solana";
+import { scanWallet, ScannedMint, fmtSol, fmtUsd, shorten, useSolUsd } from "../lib/solana";
 import { buildRecoveryPlan } from "../lib/recovery";
 import { feeRecipientsFor, resolveAffiliate } from "../lib/fees";
 import { recordClaim } from "../lib/leaderboard";
@@ -16,6 +16,7 @@ type RowState = "idle" | "working" | "done" | "error";
 export function WalletScan() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
+  const solUsd = useSolUsd();
   const [mints, setMints] = useState<ScannedMint[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [err, setErr] = useState("");
@@ -153,7 +154,7 @@ export function WalletScan() {
                       <div className="text-right">
                         <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">Recoverable</div>
                         <div className="font-display font-bold text-lg text-sol">◎ {fmtSol(m.excessLamports, 4)}</div>
-                        <div className="font-mono text-[10px] text-muted">≈ {fmtUsd(m.excessLamports)}</div>
+                        <div className="font-mono text-[10px] text-muted">≈ {fmtUsd(m.excessLamports, solUsd)}</div>
                       </div>
                       {sig ? (
                         <a href={`https://solscan.io/tx/${sig}`} target="_blank" rel="noopener noreferrer"
